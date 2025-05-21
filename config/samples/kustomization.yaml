@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- django_v1alpha1_djangouser.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
