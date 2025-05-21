@@ -1,4 +1,4 @@
-apiVersion: django.my.domain/v1alpha1
+apiVersion: django.djangooperator/v1alpha1
 kind: DjangoUser
 metadata:
   labels:

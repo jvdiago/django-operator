@@ -220,7 +220,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "b9c6cbbb.my.domain",
+		LeaderElectionID:       "b9c6cbbb.djangooperator",
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{watchNamespace: cache.Config{}},
 		},

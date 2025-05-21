@@ -66,9 +66,9 @@ type realPodRunner struct {
 // all the annotation are left for when the gen binary supports Role and not only ClusterRole
 
 // +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:rbac:groups=django.my.domain,resources=djangousers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=django.my.domain,resources=djangousers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=django.my.domain,resources=djangousers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=django.djangooperator,resources=djangousers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=django.djangooperator,resources=djangousers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=django.djangooperator,resources=djangousers/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch

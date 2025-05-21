@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  name: djangousers.django.my.domain
+  name: djangousers.django.djangooperator
 spec:
-  group: django.my.domain
+  group: django.djangooperator
   names:
     kind: DjangoUser
     listKind: DjangoUserList
