@@ -33,6 +33,21 @@ import (
 // ------------------------------------------------------------------
 // TEST‐DOUBLE DECLARATIONS (top‐level, not inside Describe)
 // ------------------------------------------------------------------
+// testPodRunner is a fake PodRunner for unit tests.
+type testPodRunner struct{}
+
+func (t testPodRunner) FindDjangoPod(ctx context.Context, ns string) (*corev1.Pod, error) {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-pod",
+			Namespace: ns,
+		},
+	}, nil
+}
+
+func (t testPodRunner) ExecInPod(ctx context.Context, pod *corev1.Pod, command []string) error {
+	return nil
+}
 
 var _ = Describe("DjangoUser Controller", func() {
 	Context("When reconciling a resource", func() {
@@ -100,11 +115,20 @@ var _ = Describe("DjangoUser Controller", func() {
 			tr := &DjangoUserReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
+				// inject the test double
+				Pods: testPodRunner{},
 			}
 			_, err := tr.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			By("Verifying the status.created timestamp is set")
+			// Re-fetch the resource
+			updated := &djangov1alpha1.DjangoUser{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updated)).To(Succeed())
+
+			// Ensure Status.Created is non-zero
+			Expect(updated.Status.Created.IsZero()).To(BeFalse(), "expected Status.Created to be set")
 		})
 	})
 })

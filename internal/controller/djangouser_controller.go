@@ -43,6 +43,18 @@ type DjangoUserReconciler struct {
 	Scheme    *runtime.Scheme
 	RESTCfg   *rest.Config
 	Clientset *kubernetes.Clientset
+	Pods      PodRunner
+}
+
+type PodRunner interface {
+	FindDjangoPod(ctx context.Context, namespace string) (*corev1.Pod, error)
+	ExecInPod(ctx context.Context, pod *corev1.Pod, command []string) error
+}
+
+type realPodRunner struct {
+	Client    client.Client
+	RESTCfg   *rest.Config
+	Clientset *kubernetes.Clientset
 }
 
 // As our operator us confined in a namespace, the role file needs to be edited manually. Nevertheless,
@@ -87,8 +99,7 @@ func (r *DjangoUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			du.Spec.PasswordSecretRef.Name, du.Spec.PasswordSecretRef.Key)
 	}
 	password := string(raw)
-
-	pod, err := r.findDjangoPod(ctx, req.Namespace)
+	pod, err := r.Pods.FindDjangoPod(ctx, req.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -126,7 +137,7 @@ u.save()`, du.Spec.Username, password, du.Spec.Email, pySuperuser),
 	}
 
 	// Exec command
-	if err := r.execInPod(ctx, pod, shellCmd); err != nil {
+	if err := r.Pods.ExecInPod(ctx, pod, shellCmd); err != nil {
 		logger.Error(err, "failed to exec create user command", du.Spec.Username, "pod", pod.Name)
 		return ctrl.Result{}, err
 	}
@@ -142,13 +153,13 @@ u.save()`, du.Spec.Username, password, du.Spec.Email, pySuperuser),
 	return ctrl.Result{}, nil
 }
 
-func (r *DjangoUserReconciler) findDjangoPod(ctx context.Context, ns string) (*corev1.Pod, error) {
+func (r realPodRunner) FindDjangoPod(ctx context.Context, ns string) (*corev1.Pod, error) {
 	// Find the Django pod in this namespace
 	podList := &corev1.PodList{}
 	sel := labels.SelectorFromSet(labels.Set{
 		"app.kubernetes.io/component": "django-server",
 	})
-	if err := r.List(ctx, podList, &client.ListOptions{
+	if err := r.Client.List(ctx, podList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: sel,
 	}); err != nil {
@@ -163,7 +174,7 @@ func (r *DjangoUserReconciler) findDjangoPod(ctx context.Context, ns string) (*c
 }
 
 // execInPod runs the given command in the first container of the pod
-func (r *DjangoUserReconciler) execInPod(ctx context.Context, pod *corev1.Pod, command []string) error {
+func (r realPodRunner) ExecInPod(ctx context.Context, pod *corev1.Pod, command []string) error {
 	req := r.Clientset.CoreV1().RESTClient().
 		Post().
 		Resource("pods").
@@ -198,7 +209,12 @@ func (r *DjangoUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	r.Clientset = cs
-
+	// wire in the real PodRunner
+	r.Pods = realPodRunner{
+		Client:    r.Client,
+		RESTCfg:   r.RESTCfg,
+		Clientset: r.Clientset,
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&djangov1alpha1.DjangoUser{}).
 		Named("djangouser").
