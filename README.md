@@ -101,7 +101,7 @@ After execution, `.status.executed` is updated.
 1. **Install CRDs**
 
    ```bash
-   kubectl apply -k config/crd/bases
+   kubectl apply -k config/crd
    ```
 
 2. **Deploy the operator** (In the namespace were Django containers are running)
