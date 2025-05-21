@@ -1,9 +1,125 @@
 # django-operator
-// TODO(user): Add simple overview of use/purpose
+This operator manages common Django administration tasks directly from Kubernetes Custom Resources. It supports:
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+* **User management**: create superusers or staff users via `DjangoUser` CRs, with credentials stored in Kubernetes Secrets.
+* **Database migrations**: run `manage.py migrate` (optionally per-app or per-migration) via `DjangoMigrate` CRs.
+* **Static file collection**: run `manage.py collectstatic` via `DjangoStatic` CRs.
+* **Celery control**: manage Celery workers, revoke tasks, and flush queues via `DjangoCelery` CRs.
 
+## Usage Examples
+
+Below are YAML snippets for each CR type.
+
+### 1. Create a Django User (`DjangoUser`)
+
+**Spec**:
+
+```yaml
+apiVersion: django.my.domain/v1alpha1
+kind: DjangoUser
+metadata:
+  name: admin-user
+  namespace: django-operator
+spec:
+  username: admin
+  email: admin@example.com
+  superuser: true
+  passwordSecretRef:
+    name: admin-password-secret
+    key: password
+```
+
+**Secret** (store password):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-password-secret
+  namespace: django-operator
+stringData:
+  password: S3cr3tP@ssw0rd
+```
+
+After applying both, the operator will exec into the Django pod and create/update the user, setting `.status.created`.
+
+### 2. Run Database Migrations (`DjangoMigrate`)
+
+**Spec**:
+
+```yaml
+apiVersion: django.my.domain/v1alpha1
+kind: DjangoMigrate
+metadata:
+  name: migrate-all
+  namespace: django-operator
+spec:
+  fake: false          # run fake migrations if true
+  app: myapp                 # optional: run only this app's migrations
+  migration:            # optional: target a specific migration
+```
+
+Applying this CR runs `python manage.py migrate` inside the Django pod and records `.status.applied`.
+
+### 3. Collect Static Files (`DjangoStatic`)
+
+**Spec**:
+
+```yaml
+apiVersion: django.my.domain/v1alpha1
+kind: DjangoStatic
+metadata:
+  name: collect-static
+  namespace: django-operator
+spec: {}
+```
+
+This triggers `python manage.py collectstatic --noinput` and sets `.status.collected`.
+
+### 4. Control Celery (`DjangoCelery`)
+
+**Spec**:
+
+```yaml
+apiVersion: django.my.domain/v1alpha1
+kind: DjangoCelery
+metadata:
+  name: flush-all-queues
+  namespace: django-operator
+spec:
+  app: myapp          # the Celery app name
+  worker: worker1     # optional: target a specific worker
+  task:                # optional: revoke a specific task ID
+```
+
+* **Flush all queues**: omit `worker` and `task`, the operator runs `celery -A {{app}} purge -f`.
+* **Flush a worker**: set `worker`, runs `celery -A {{app}} purge -f -Q {{worker}}`.
+* **Revoke a task**: set `task`, runs `celery -A {{app}} control revoke {{task}}`.
+
+After execution, `.status.executed` is updated.
+## Installation
+1. **Install CRDs**
+
+   ```bash
+   kubectl apply -k config/crd/bases
+   ```
+
+2. **Deploy the operator** (In the namespace were Django containers are running)
+
+   ```bash
+   # Install RBAC and Deployment
+   kubectl apply -k config/rbac -n django-operator
+   kubectl apply -k config/default -n django-operator
+   ```
+## Uninstallation
+
+To remove the operator and CRDs:
+
+```bash
+kubectl delete -k config/default -n django-operator
+kubectl delete -k config/crd
+kubectl delete namespace django-operator
+```
 ## Getting Started
 
 ### Prerequisites
@@ -65,58 +181,6 @@ make uninstall
 ```sh
 make undeploy
 ```
-
-## Project Distribution
-
-Following the options to release and provide this solution to the users.
-
-### By providing a bundle with all YAML files
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/django-operator:tag
-```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/django-operator/<tag or branch>/dist/install.yaml
-```
-
-### By providing a Helm Chart
-
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
 ## License
 
 Copyright 2025.

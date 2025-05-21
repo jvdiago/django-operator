@@ -6,4 +6,17 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: djangouser-sample
 spec:
-  # TODO(user): Add fields here
+  username: admin
+  email:  admin@example.com
+  superuser: true
+  passwordSecretRef:
+    name: admin-password
+    key:  password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-password
+type: Opaque
+stringData:
+  password: S3cr3tP@ssw0rd1

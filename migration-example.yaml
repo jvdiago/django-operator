@@ -1,6 +1,0 @@
-apiVersion: django.djangooperator/v1alpha1
-kind: DjangoMigrate
-metadata:
-  name: migrateall
-spec:
-  fake:  false
