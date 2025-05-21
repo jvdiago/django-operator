@@ -22,6 +22,14 @@ rules:
   - create
   - patch
 - apiGroups:
+  - ""               # core API group
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - "coordination.k8s.io"
   resources:
   - leases
@@ -36,6 +44,7 @@ rules:
   - django.djangooperator
   resources:
   - djangousers
+  - djangomigrates
   verbs:
   - create
   - delete
@@ -48,12 +57,14 @@ rules:
   - django.djangooperator
   resources:
   - djangousers/finalizers
+  - djangomigrates/finalizers
   verbs:
   - update
 - apiGroups:
   - django.djangooperator
   resources:
   - djangousers/status
+  - djangomigrates/status
   verbs:
   - get
   - patch
