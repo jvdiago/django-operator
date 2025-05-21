@@ -1,0 +1,4 @@
+apiVersion: django.djangooperator/v1alpha1
+kind: DjangoStatic
+metadata:
+  name: collectstatic
