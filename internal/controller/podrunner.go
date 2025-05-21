@@ -66,7 +66,7 @@ func (r DjangoPodRunner) ExecInPod(ctx context.Context, pod *corev1.Pod, command
 	if err != nil {
 		return err
 	}
-	return executor.Stream(remotecommand.StreamOptions{
+	return executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	})
