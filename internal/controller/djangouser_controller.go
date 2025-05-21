@@ -38,12 +38,16 @@ import (
 )
 
 // DjangoUserReconciler reconciles a DjangoUser object
+
+type PodLabel map[string]string
+
 type DjangoUserReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	RESTCfg   *rest.Config
-	Clientset *kubernetes.Clientset
-	Pods      PodRunner
+	Scheme         *runtime.Scheme
+	RESTCfg        *rest.Config
+	Clientset      *kubernetes.Clientset
+	Pods           PodRunner
+	DjangoPodlabel PodLabel
 }
 
 type PodRunner interface {
@@ -52,9 +56,10 @@ type PodRunner interface {
 }
 
 type realPodRunner struct {
-	Client    client.Client
-	RESTCfg   *rest.Config
-	Clientset *kubernetes.Clientset
+	Client         client.Client
+	RESTCfg        *rest.Config
+	Clientset      *kubernetes.Clientset
+	DjangoPodlabel PodLabel
 }
 
 // As our operator us confined in a namespace, the role file needs to be edited manually. Nevertheless,
@@ -156,9 +161,7 @@ u.save()`, du.Spec.Username, password, du.Spec.Email, pySuperuser),
 func (r realPodRunner) FindDjangoPod(ctx context.Context, ns string) (*corev1.Pod, error) {
 	// Find the Django pod in this namespace
 	podList := &corev1.PodList{}
-	sel := labels.SelectorFromSet(labels.Set{
-		"app.kubernetes.io/component": "django-server",
-	})
+	sel := labels.SelectorFromSet(labels.Set(r.DjangoPodlabel))
 	if err := r.Client.List(ctx, podList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: sel,
@@ -209,11 +212,13 @@ func (r *DjangoUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	r.Clientset = cs
+
 	// wire in the real PodRunner
 	r.Pods = realPodRunner{
-		Client:    r.Client,
-		RESTCfg:   r.RESTCfg,
-		Clientset: r.Clientset,
+		Client:         r.Client,
+		RESTCfg:        r.RESTCfg,
+		Clientset:      r.Clientset,
+		DjangoPodlabel: r.DjangoPodlabel,
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&djangov1alpha1.DjangoUser{}).

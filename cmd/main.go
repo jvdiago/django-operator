@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -67,6 +68,22 @@ func getWatchNamespace() (string, error) {
 		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
 	}
 	return ns, nil
+}
+
+func getDjangoPodLabel() controller.PodLabel {
+	var djangoPodLabelEnvVar = "DJANGO_POD_LABEL"
+	label, found := os.LookupEnv(djangoPodLabelEnvVar)
+	if !found {
+		label = "app.kubernetes.io/component:django-server"
+	}
+	parts := strings.SplitN(label, ":", 2)
+	if len(parts) != 2 {
+		return controller.PodLabel{}
+	}
+
+	return controller.PodLabel{
+		strings.TrimSpace(parts[0]): strings.TrimSpace(parts[1]),
+	}
 }
 
 // nolint:gocyclo
@@ -224,9 +241,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	label := getDjangoPodLabel()
+
+	if len(label) == 0 {
+		setupLog.Error(err, "Cannot parse DJANGO_POD_LABEL")
+		os.Exit(1)
+	}
+
 	if err = (&controller.DjangoUserReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		DjangoPodlabel: label,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoUser")
 		os.Exit(1)
