@@ -20,37 +20,43 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DjangoStaticSpec defines the desired state of DjangoStatic.
-type DjangoStaticSpec struct{}
-
-// DjangoStaticStatus defines the observed state of DjangoStatic.
-type DjangoStaticStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+// DjangoCelerySpec defines the desired state of DjangoCelery.
+type DjangoCelerySpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Collected metav1.Time `json:"collected"`
+
+	// Foo is an example field of DjangoCelery. Edit djangocelery_types.go to remove/update
+	App    string `json:"app"`
+	Worker string `json:"worker,omitempty"`
+	Task   string `json:"task,omitempty"`
+}
+
+// DjangoCeleryStatus defines the observed state of DjangoCelery.
+type DjangoCeleryStatus struct {
+	Executed metav1.Time `json:"executed,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// DjangoStatic is the Schema for the djangostatics API.
-type DjangoStatic struct {
+// DjangoCelery is the Schema for the djangoceleries API.
+type DjangoCelery struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DjangoStaticSpec   `json:"spec,omitempty"`
-	Status DjangoStaticStatus `json:"status,omitempty"`
+	Spec   DjangoCelerySpec   `json:"spec,omitempty"`
+	Status DjangoCeleryStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// DjangoStaticList contains a list of DjangoStatic.
-type DjangoStaticList struct {
+// DjangoCeleryList contains a list of DjangoCelery.
+type DjangoCeleryList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DjangoStatic `json:"items"`
+	Items           []DjangoCelery `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&DjangoStatic{}, &DjangoStaticList{})
+	SchemeBuilder.Register(&DjangoCelery{}, &DjangoCeleryList{})
 }

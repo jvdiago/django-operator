@@ -5,6 +5,7 @@ resources:
 - bases/django.djangooperator_djangousers.yaml
 - bases/django.djangooperator_djangomigrates.yaml
 - bases/django.djangooperator_djangostatics.yaml
+- bases/django.djangooperator_djangoceleries.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

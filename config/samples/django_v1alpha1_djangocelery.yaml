@@ -1,0 +1,9 @@
+apiVersion: django.djangooperator/v1alpha1
+kind: DjangoCelery
+metadata:
+  labels:
+    app.kubernetes.io/name: django-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: djangocelery-sample
+spec:
+  # TODO(user): Add fields here

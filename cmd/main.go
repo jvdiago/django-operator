@@ -68,11 +68,10 @@ func getWatchNamespace() (string, error) {
 	return ns, nil
 }
 
-func getDjangoPodLabel() controller.PodLabel {
-	var djangoPodLabelEnvVar = "DJANGO_POD_LABEL"
-	label, found := os.LookupEnv(djangoPodLabelEnvVar)
+func getDjangoPodLabel(podLabelEnvVar string) controller.PodLabel {
+	label, found := os.LookupEnv(podLabelEnvVar)
 	if !found {
-		label = "app.kubernetes.io/component:django-server"
+		return controller.PodLabel{}
 	}
 	parts := strings.SplitN(label, ":", 2)
 	if len(parts) != 2 {
@@ -239,33 +238,51 @@ func main() {
 		os.Exit(1)
 	}
 
-	label := getDjangoPodLabel()
+	djangoPodLabelEnvVar := "DJANGO_POD_LABEL"
+	djangoPodLabel := getDjangoPodLabel(djangoPodLabelEnvVar)
 
-	if len(label) == 0 {
+	if len(djangoPodLabel) == 0 {
 		setupLog.Error(err, "Cannot parse DJANGO_POD_LABEL")
+		os.Exit(1)
+	}
+	celeryPodLabelEnvVar := "CELERY_POD_LABEL"
+	celeryPodLabel := getDjangoPodLabel(celeryPodLabelEnvVar)
+
+	if len(celeryPodLabel) == 0 {
+		setupLog.Error(err, "Cannot parse CELERY_POD_LABEL")
 		os.Exit(1)
 	}
 
 	if err = (&controller.DjangoUserReconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
-		DjangoPodlabel: label,
+		DjangoPodlabel: djangoPodLabel,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoUser")
 		os.Exit(1)
 	}
 	if err = (&controller.DjangoMigrateReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		DjangoPodlabel: djangoPodLabel,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoMigrate")
 		os.Exit(1)
 	}
 	if err = (&controller.DjangoStaticReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		DjangoPodlabel: djangoPodLabel,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoStatic")
+		os.Exit(1)
+	}
+	if err = (&controller.DjangoCeleryReconciler{
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		DjangoPodlabel: celeryPodLabel,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DjangoCelery")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

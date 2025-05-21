@@ -46,6 +46,7 @@ rules:
   - djangousers
   - djangomigrates
   - djangostatics
+  - djangoceleries
   verbs:
   - create
   - delete
@@ -60,6 +61,7 @@ rules:
   - djangousers/finalizers
   - djangomigrates/finalizers
   - djangostatics/finalizers
+  - djangoceleries/finalizers
   verbs:
   - update
 - apiGroups:
@@ -68,6 +70,7 @@ rules:
   - djangousers/status
   - djangomigrates/status
   - djangostatics/status
+  - djangoceleries/status
   verbs:
   - get
   - patch
