@@ -221,7 +221,9 @@ func main() {
 			LeaderElection:         enableLeaderElection,
 			LeaderElectionID:       "b9c6cbbb.djangooperator",
 			Cache: cache.Options{
-				DefaultNamespaces: map[string]cache.Config{watchNamespace: cache.Config{}},
+				DefaultNamespaces: map[string]cache.Config{
+					watchNamespace: cache.Config{},
+				},
 			},
 			// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 			// when the Manager ends. This requires the binary to immediately end when the
