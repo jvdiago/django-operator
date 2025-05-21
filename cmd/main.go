@@ -222,7 +222,7 @@ func main() {
 			LeaderElectionID:       "b9c6cbbb.djangooperator",
 			Cache: cache.Options{
 				DefaultNamespaces: map[string]cache.Config{
-					watchNamespace: cache.Config{},
+					watchNamespace: {},
 				},
 			},
 			// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily

@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"time"
+
 	djangov1alpha1 "github.com/jvdiago/django-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +28,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 )
 
 // DjangoCeleryReconciler reconciles a DjangoCelery object
