@@ -41,14 +41,24 @@ spec:
             properties:
               email:
                 type: string
-              password:
-                type: string
+              passwordSecretRef:
+                properties:
+                  key:
+                    description: Key within Data
+                    type: string
+                  name:
+                    description: Name of the Secret in the same namespace
+                    type: string
+                required:
+                - key
+                - name
+                type: object
               superuser:
                 type: boolean
               username:
                 type: string
             required:
-            - password
+            - passwordSecretRef
             - superuser
             - username
             type: object

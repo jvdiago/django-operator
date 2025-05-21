@@ -22,10 +22,17 @@ import (
 
 // DjangoUserSpec defines the desired state of DjangoUser.
 type DjangoUserSpec struct {
-	Username  string `json:"username"`
-	Email     string `json:"email,omitempty"`
-	Password  string `json:"password"`
-	Superuser bool   `json:"superuser"`
+	Username          string            `json:"username"`
+	Email             string            `json:"email,omitempty"`
+	PasswordSecretRef SecretKeySelector `json:"passwordSecretRef"`
+	Superuser         bool              `json:"superuser"`
+}
+
+type SecretKeySelector struct {
+	// Name of the Secret in the same namespace
+	Name string `json:"name"`
+	// Key within Data
+	Key string `json:"key"`
 }
 
 // DjangoUserStatus defines the observed state of DjangoUser.

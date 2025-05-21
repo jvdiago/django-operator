@@ -19,22 +19,22 @@ package controller
 import (
 	"context"
 	"fmt"
+	djangov1alpha1 "github.com/jvdiago/django-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
-
-	djangov1alpha1 "github.com/jvdiago/django-operator/api/v1alpha1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/remotecommand"
 )
 
 // DjangoUserReconciler reconciles a DjangoUser object
@@ -60,7 +60,7 @@ type DjangoUserReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *DjangoUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logf.FromContext(ctx)
-	// 1) Fetch the DjangoUser
+	// Fetch the DjangoUser
 	var du djangov1alpha1.DjangoUser
 	if err := r.Get(ctx, req.NamespacedName, &du); err != nil {
 		if errors.IsNotFound(err) {
@@ -69,27 +69,33 @@ func (r *DjangoUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return ctrl.Result{}, err
 	}
-	// 2) Skip if already created
+	// Skip if already created
 	if !du.Status.Created.IsZero() {
 		return ctrl.Result{}, nil
 	}
-	// 3) Find the Django pod in this namespace
-	podList := &corev1.PodList{}
-	sel := labels.SelectorFromSet(labels.Set{
-		"app.kubernetes.io/component": "django-server",
-	})
-	if err := r.List(ctx, podList, &client.ListOptions{
-		Namespace:     req.Namespace,
-		LabelSelector: sel,
-	}); err != nil {
+	// Read the password from the Secret
+	var pwSecret corev1.Secret
+	if err := r.Get(ctx,
+		types.NamespacedName{Namespace: req.Namespace, Name: du.Spec.PasswordSecretRef.Name},
+		&pwSecret,
+	); err != nil {
+		return ctrl.Result{}, fmt.Errorf("reading password secret: %w", err)
+	}
+	raw, ok := pwSecret.Data[du.Spec.PasswordSecretRef.Key]
+	if !ok {
+		return ctrl.Result{}, fmt.Errorf("secret %s missing key %q",
+			du.Spec.PasswordSecretRef.Name, du.Spec.PasswordSecretRef.Key)
+	}
+	password := string(raw)
+
+	pod, err := r.findDjangoPod(ctx, req.Namespace)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if len(podList.Items) == 0 {
+	if pod == nil {
 		logger.Info("no django-server pod found; retrying shortly")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	pod := podList.Items[0]
-
 	// 4) Build the command
 	pySuperuser := "False"
 	if du.Spec.Superuser {
@@ -116,16 +122,16 @@ if not created:
     u.is_superuser = superuser
     u.is_active = True
 u.set_password(password);
-u.save()`, du.Spec.Username, du.Spec.Password, du.Spec.Email, pySuperuser),
+u.save()`, du.Spec.Username, password, du.Spec.Email, pySuperuser),
 	}
 
-	// 5) Exec command
-	if err := r.execInPod(ctx, &pod, shellCmd); err != nil {
+	// Exec command
+	if err := r.execInPod(ctx, pod, shellCmd); err != nil {
 		logger.Error(err, "failed to exec create user command", du.Spec.Username, "pod", pod.Name)
 		return ctrl.Result{}, err
 	}
 
-	// 6) Update status.Created
+	// Update status.Created
 	du.Status.Created = metav1.Now()
 	if err := r.Status().Update(ctx, &du); err != nil {
 		return ctrl.Result{}, err
@@ -134,6 +140,26 @@ u.save()`, du.Spec.Username, du.Spec.Password, du.Spec.Email, pySuperuser),
 	logger.Info("User created", "user", du.Spec.Username, "superuser", du.Spec.Superuser)
 
 	return ctrl.Result{}, nil
+}
+
+func (r *DjangoUserReconciler) findDjangoPod(ctx context.Context, ns string) (*corev1.Pod, error) {
+	// Find the Django pod in this namespace
+	podList := &corev1.PodList{}
+	sel := labels.SelectorFromSet(labels.Set{
+		"app.kubernetes.io/component": "django-server",
+	})
+	if err := r.List(ctx, podList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: sel,
+	}); err != nil {
+		return nil, err
+	}
+	if len(podList.Items) == 0 {
+		return nil, nil
+	}
+	pod := podList.Items[0]
+
+	return &pod, nil
 }
 
 // execInPod runs the given command in the first container of the pod
