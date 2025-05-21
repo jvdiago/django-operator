@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/django.djangooperator_djangousers.yaml
+- bases/django.djangooperator_djangomigrates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

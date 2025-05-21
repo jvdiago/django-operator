@@ -58,6 +58,8 @@ spec:
         name: manager
         ports: []
         env:
+          - name: DJANGO_POD_LABEL
+            value: "app.kubernetes.io/component:django-server"
           - name: WATCH_NAMESPACE
             valueFrom:
               fieldRef:
@@ -90,5 +92,5 @@ spec:
             memory: 64Mi
         volumeMounts: []
       volumes: []
-      serviceAccountName: djangouser-operator-sa
+      serviceAccountName: django-operator-sa
       terminationGracePeriodSeconds: 10

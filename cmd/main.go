@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -254,6 +255,13 @@ func main() {
 		DjangoPodlabel: label,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoUser")
+		os.Exit(1)
+	}
+	if err = (&controller.DjangoMigrateReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DjangoMigrate")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

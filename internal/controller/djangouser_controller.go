@@ -23,14 +23,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,26 +34,10 @@ import (
 
 // DjangoUserReconciler reconciles a DjangoUser object
 
-type PodLabel map[string]string
-
 type DjangoUserReconciler struct {
 	client.Client
 	Scheme         *runtime.Scheme
-	RESTCfg        *rest.Config
-	Clientset      *kubernetes.Clientset
 	Pods           PodRunner
-	DjangoPodlabel PodLabel
-}
-
-type PodRunner interface {
-	FindDjangoPod(ctx context.Context, namespace string) (*corev1.Pod, error)
-	ExecInPod(ctx context.Context, pod *corev1.Pod, command []string) error
-}
-
-type realPodRunner struct {
-	Client         client.Client
-	RESTCfg        *rest.Config
-	Clientset      *kubernetes.Clientset
 	DjangoPodlabel PodLabel
 }
 
@@ -158,67 +137,21 @@ u.save()`, du.Spec.Username, password, du.Spec.Email, pySuperuser),
 	return ctrl.Result{}, nil
 }
 
-func (r realPodRunner) FindDjangoPod(ctx context.Context, ns string) (*corev1.Pod, error) {
-	// Find the Django pod in this namespace
-	podList := &corev1.PodList{}
-	sel := labels.SelectorFromSet(labels.Set(r.DjangoPodlabel))
-	if err := r.Client.List(ctx, podList, &client.ListOptions{
-		Namespace:     ns,
-		LabelSelector: sel,
-	}); err != nil {
-		return nil, err
-	}
-	if len(podList.Items) == 0 {
-		return nil, nil
-	}
-	pod := podList.Items[0]
-
-	return &pod, nil
-}
-
-// execInPod runs the given command in the first container of the pod
-func (r realPodRunner) ExecInPod(ctx context.Context, pod *corev1.Pod, command []string) error {
-	req := r.Clientset.CoreV1().RESTClient().
-		Post().
-		Resource("pods").
-		Name(pod.Name).
-		Namespace(pod.Namespace).
-		SubResource("exec").
-		VersionedParams(&corev1.PodExecOptions{
-			Command:   command,
-			Container: pod.Spec.Containers[0].Name,
-			Stdin:     false,
-			Stdout:    true,
-			Stderr:    true,
-			TTY:       false,
-		}, scheme.ParameterCodec)
-
-	executor, err := remotecommand.NewSPDYExecutor(r.RESTCfg, "POST", req.URL())
-	if err != nil {
-		return err
-	}
-	return executor.Stream(remotecommand.StreamOptions{
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	})
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *DjangoUserReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// initialize REST config & clientset
-	r.RESTCfg = mgr.GetConfig()
-	cs, err := kubernetes.NewForConfig(r.RESTCfg)
+	RestCFG := mgr.GetConfig()
+	cs, err := kubernetes.NewForConfig(RestCFG)
 	if err != nil {
 		return err
 	}
-	r.Clientset = cs
 
 	// wire in the real PodRunner
-	r.Pods = realPodRunner{
-		Client:         r.Client,
-		RESTCfg:        r.RESTCfg,
-		Clientset:      r.Clientset,
-		DjangoPodlabel: r.DjangoPodlabel,
+	r.Pods = DjangoPodRunner{
+		Client:    r.Client,
+		RESTCfg:   RestCFG,
+		Clientset: cs,
+		Label:     r.DjangoPodlabel,
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&djangov1alpha1.DjangoUser{}).
