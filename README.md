@@ -6,6 +6,18 @@ This operator manages common Django administration tasks directly from Kubernete
 * **Static file collection**: run `manage.py collectstatic` via `DjangoStatic` CRs.
 * **Celery control**: manage Celery workers, revoke tasks, and flush queues via `DjangoCelery` CRs.
 
+## Namespaced Operator
+
+In order to run the commands the operator needs exec privileges on pods. Because of the possible security issue that this might create, the operator is restricted to run on the specific namespace where Django is running. Multiple operator are needed for multiple Django deployments in multiple namespaces
+
+## Configuration
+
+The operator currently needs two ENV variables to be configured to be able to find the Django and Celery pods. They are defined in config/manager.manager.yaml and need to be tailored to your tags to be able to find the pods
+```       - name: DJANGO_POD_LABEL
+            value: "app.kubernetes.io/component:django-server"
+          - name: CELERY_POD_LABEL
+            value: "app.kubernetes.io/component:django-celery-work-celery"
+```
 ## Usage Examples
 
 Below are YAML snippets for each CR type.
@@ -148,7 +160,7 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<some-registry>/django-operator:tag
+make deploy IMG=<some-registry>/django-operator:tag NAMESPACE=<my-namespace>
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
