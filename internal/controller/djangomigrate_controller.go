@@ -36,6 +36,7 @@ type DjangoMigrateReconciler struct {
 	Scheme         *runtime.Scheme
 	Pods           PodRunner
 	DjangoPodlabel PodLabel
+	KeepCRs        int
 }
 
 // +kubebuilder:rbac:groups=django.djangooperator,resources=djangomigrates,verbs=get;list;watch;create;update;patch;delete
@@ -66,7 +67,7 @@ func (r *DjangoMigrateReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		logger.Info("no django-server pod found; retrying shortly")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	// 4) Build the command
+	// Build the command
 	shellCmd := []string{
 		"python", "manage.py", "migrate", "--noinput",
 	}
@@ -92,6 +93,12 @@ func (r *DjangoMigrateReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	logger.Info("Migration applied", "migrate", dm.Name)
+
+	// keep only the most-recent DjangoMigrate objects
+	migrateGVK := djangov1alpha1.GroupVersion.WithKind("DjangoMigrate")
+	if err := pruneOldCRs(r.Client, ctx, migrateGVK, req.Namespace, r.KeepCRs); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 

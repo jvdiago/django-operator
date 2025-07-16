@@ -40,8 +40,6 @@ spec:
             description: DjangoCelerySpec defines the desired state of DjangoCelery.
             properties:
               app:
-                description: Foo is an example field of DjangoCelery. Edit djangocelery_types.go
-                  to remove/update
                 type: string
               task:
                 type: string

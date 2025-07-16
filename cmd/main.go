@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -81,6 +82,22 @@ func getDjangoPodLabel(podLabelEnvVar string) controller.PodLabel {
 	return controller.PodLabel{
 		strings.TrimSpace(parts[0]): strings.TrimSpace(parts[1]),
 	}
+}
+
+func getKeepCRs(keepCRsEnvVar string) int {
+	// Look up the raw string (if unset, keepCrsEnv == "")
+	keepCrsEnv, found := os.LookupEnv(keepCRsEnvVar)
+	if !found {
+		return 0
+	}
+
+	// Parse it
+	keep, err := strconv.Atoi(keepCrsEnv)
+	if err != nil {
+		setupLog.Info("warning: %s is not a valid integer, defaulting to 0", keepCRsEnvVar)
+		return 0
+	}
+	return keep
 }
 
 // nolint:gocyclo
@@ -252,16 +269,19 @@ func main() {
 	}
 	celeryPodLabelEnvVar := "CELERY_POD_LABEL"
 	celeryPodLabel := getDjangoPodLabel(celeryPodLabelEnvVar)
-
 	if len(celeryPodLabel) == 0 {
 		setupLog.Error(err, "Cannot parse CELERY_POD_LABEL")
 		os.Exit(1)
 	}
 
+	keepCRsEnvVar := "NUM_OLD_CRS"
+	keepCrs := getKeepCRs(keepCRsEnvVar)
+
 	if err = (&controller.DjangoUserReconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		DjangoPodlabel: djangoPodLabel,
+		KeepCRs:        keepCrs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoUser")
 		os.Exit(1)
@@ -270,6 +290,7 @@ func main() {
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		DjangoPodlabel: djangoPodLabel,
+		KeepCRs:        keepCrs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoMigrate")
 		os.Exit(1)
@@ -278,6 +299,7 @@ func main() {
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		DjangoPodlabel: djangoPodLabel,
+		KeepCRs:        keepCrs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoStatic")
 		os.Exit(1)
@@ -286,6 +308,7 @@ func main() {
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		DjangoPodlabel: celeryPodLabel,
+		KeepCRs:        keepCrs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DjangoCelery")
 		os.Exit(1)

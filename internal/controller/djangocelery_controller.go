@@ -36,6 +36,7 @@ type DjangoCeleryReconciler struct {
 	Scheme         *runtime.Scheme
 	Pods           PodRunner
 	DjangoPodlabel PodLabel
+	KeepCRs        int
 }
 
 // +kubebuilder:rbac:groups=django.djangooperator,resources=djangoceleries,verbs=get;list;watch;create;update;patch;delete
@@ -66,7 +67,7 @@ func (r *DjangoCeleryReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		logger.Info("no django-server pod found; retrying shortly")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	// 4) Build the command
+	// Build the command
 	shellCmd := []string{
 		"celery", "-A", dc.Spec.App,
 	}
@@ -91,6 +92,11 @@ func (r *DjangoCeleryReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	logger.Info("Celery", "exec", dc.Name)
 
+	// keep only the most-recent DjangoCelery objects
+	celeryGVK := djangov1alpha1.GroupVersion.WithKind("DjangoCelery")
+	if err := pruneOldCRs(r.Client, ctx, celeryGVK, req.Namespace, r.KeepCRs); err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 
 }

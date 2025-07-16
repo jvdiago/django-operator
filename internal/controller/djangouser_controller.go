@@ -40,6 +40,7 @@ type DjangoUserReconciler struct {
 	Scheme         *runtime.Scheme
 	Pods           PodRunner
 	DjangoPodlabel PodLabel
+	KeepCRs        int
 }
 
 // As our operator us confined in a namespace, the role file needs to be edited manually. Nevertheless,
@@ -134,6 +135,12 @@ u.save()`, du.Spec.Username, password, du.Spec.Email, pySuperuser),
 	}
 
 	logger.Info("User created", "user", du.Spec.Username, "superuser", du.Spec.Superuser)
+
+	// keep only the most-recent DjangoUser objects
+	userGVK := djangov1alpha1.GroupVersion.WithKind("DjangoCelery")
+	if err := pruneOldCRs(r.Client, ctx, userGVK, req.Namespace, r.KeepCRs); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }

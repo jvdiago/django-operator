@@ -36,6 +36,7 @@ type DjangoStaticReconciler struct {
 	Scheme         *runtime.Scheme
 	Pods           PodRunner
 	DjangoPodlabel PodLabel
+	KeepCRs        int
 }
 
 // +kubebuilder:rbac:groups=django.djangooperator,resources=djangostatics,verbs=get;list;watch;create;update;patch;delete
@@ -66,7 +67,7 @@ func (r *DjangoStaticReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		logger.Info("no django-server pod found; retrying shortly")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	// 4) Build the command
+	// Build the command
 	shellCmd := []string{
 		"python", "manage.py", "collectstatic", "--noinput",
 	}
@@ -83,6 +84,12 @@ func (r *DjangoStaticReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	logger.Info("Statics collected", "collectstatic", ds.Name)
+
+	// keep only the most-recent DjangoStatic objects
+	staticGVK := djangov1alpha1.GroupVersion.WithKind("DjangoStatic")
+	if err := pruneOldCRs(r.Client, ctx, staticGVK, req.Namespace, r.KeepCRs); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 

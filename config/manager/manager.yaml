@@ -62,6 +62,8 @@ spec:
             value: "app.kubernetes.io/component:django-server"
           - name: CELERY_POD_LABEL
             value: "app.kubernetes.io/component:django-celery-work-celery"
+          - name: NUM_OLD_CRS
+            value: "0"
           - name: WATCH_NAMESPACE
             valueFrom:
               fieldRef:

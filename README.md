@@ -18,6 +18,11 @@ The operator currently needs two ENV variables to be configured to be able to fi
           - name: CELERY_POD_LABEL
             value: "app.kubernetes.io/component:django-celery-work-celery"
 ```
+
+The operator also can be configured to delete old CRs. By default it keeps all of them, but by setting the following ENV var, it will keep only the specified amount of CRs (of each type)
+```       - name: NUM_OLD_CRS
+            value: "2"
+```
 ## Usage Examples
 
 Below are YAML snippets for each CR type.

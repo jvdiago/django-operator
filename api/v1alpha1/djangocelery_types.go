@@ -22,10 +22,6 @@ import (
 
 // DjangoCelerySpec defines the desired state of DjangoCelery.
 type DjangoCelerySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of DjangoCelery. Edit djangocelery_types.go to remove/update
 	App    string `json:"app"`
 	Worker string `json:"worker,omitempty"`
 	Task   string `json:"task,omitempty"`
