@@ -28,7 +28,7 @@ func listCRs(
 
 	// sort descending by CreationTimestamp
 	sort.Slice(ul.Items, func(i, j int) bool {
-		return ul.Items[i].GetCreationTimestamp().Time.After(
+		return ul.Items[i].GetCreationTimestamp().After(
 			ul.Items[j].GetCreationTimestamp().Time,
 		)
 	})
