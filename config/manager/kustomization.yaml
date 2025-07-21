@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: jvela/django-operator
-  newTag: "1.0"
+  newTag: alpha1

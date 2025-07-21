@@ -1,0 +1,11 @@
+apiVersion: django.djangooperator/v1alpha1
+kind: DjangoApp
+metadata:
+  labels:
+    app.kubernetes.io/name: django-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: djangoapp-sample
+spec:
+  values:
+    djangoServer:
+      replicaCount: 2

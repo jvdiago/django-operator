@@ -4,4 +4,5 @@ resources:
 - django_v1alpha1_djangomigrate.yaml
 - django_v1alpha1_djangostatic.yaml
 - django_v1alpha1_djangocelery.yaml
+- django_v1alpha1_djangoapp.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

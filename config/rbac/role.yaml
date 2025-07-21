@@ -17,6 +17,54 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  - services
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - patch
+- apiGroups:
+  - "apps"
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - patch
+- apiGroups:
+  - "autoscaling"
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - patch
+- apiGroups:
+  - "networking.k8s.io"
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
@@ -47,6 +95,7 @@ rules:
   - djangomigrates
   - djangostatics
   - djangoceleries
+  - djangoapps
   verbs:
   - create
   - delete
@@ -62,6 +111,7 @@ rules:
   - djangomigrates/finalizers
   - djangostatics/finalizers
   - djangoceleries/finalizers
+  - djangoapps/finalizers
   verbs:
   - update
 - apiGroups:
@@ -71,6 +121,7 @@ rules:
   - djangomigrates/status
   - djangostatics/status
   - djangoceleries/status
+  - djangoapps/status
   verbs:
   - get
   - patch

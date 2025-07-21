@@ -1,6 +1,6 @@
 # django-operator
 This operator manages common Django administration tasks directly from Kubernetes Custom Resources. It supports:
-
+* **Application lifecycle**: deploy, upgrade, rollback, and scale your Django and Celery pods via the embedded Helm chart (`github.com/jvdiago/django-helm-template`).
 * **User management**: create superusers or staff users via `DjangoUser` CRs, with credentials stored in Kubernetes Secrets.
 * **Database migrations**: run `manage.py migrate` (optionally per-app or per-migration) via `DjangoMigrate` CRs.
 * **Static file collection**: run `manage.py collectstatic` via `DjangoStatic` CRs.
@@ -23,6 +23,28 @@ The operator also can be configured to delete old CRs. By default it keeps all o
 ```       - name: NUM_OLD_CRS
             value: "2"
 ```
+### Helm‐based Pod Lifecycle
+
+By default the operator uses the embedded Helm chart to manage the lifecycle of the Django and Celery pods. You can override any chart values via the `DjangoApp` CR’s `.spec.values`. For example:
+
+```yaml
+apiVersion: django.djangooperator/v1alpha1
+kind: DjangoApp
+metadata:
+  name: sample-app
+  namespace: django-operator
+spec:
+  # pass any helm chart values here:
+  values:
+    replicaCount: 2
+    image:
+      repository: myregistry/my-django
+      tag: v1.2.3
+    celery:
+      enabled: true
+      replicaCount: 3
+
+Any other values from github.com/jvdiago/django-helm-template can be passed through in .spec.values.
 ## Usage Examples
 
 Below are YAML snippets for each CR type.
@@ -32,7 +54,7 @@ Below are YAML snippets for each CR type.
 **Spec**:
 
 ```yaml
-apiVersion: django.my.domain/v1alpha1
+apiVersion: django.djangooperator/v1alpha1
 kind: DjangoUser
 metadata:
   name: admin-user
@@ -65,7 +87,7 @@ After applying both, the operator will exec into the Django pod and create/updat
 **Spec**:
 
 ```yaml
-apiVersion: django.my.domain/v1alpha1
+apiVersion: django.djangooperator/v1alpha1
 kind: DjangoMigrate
 metadata:
   name: migrate-all
@@ -83,7 +105,7 @@ Applying this CR runs `python manage.py migrate` inside the Django pod and recor
 **Spec**:
 
 ```yaml
-apiVersion: django.my.domain/v1alpha1
+apiVersion: django.djangooperator/v1alpha1
 kind: DjangoStatic
 metadata:
   name: collect-static
@@ -98,7 +120,7 @@ This triggers `python manage.py collectstatic --noinput` and sets `.status.colle
 **Spec**:
 
 ```yaml
-apiVersion: django.my.domain/v1alpha1
+apiVersion: django.djangooperator/v1alpha1
 kind: DjangoCelery
 metadata:
   name: flush-all-queues
@@ -114,6 +136,34 @@ spec:
 * **Revoke a task**: set `task`, runs `celery -A {{app}} control revoke {{task}}`.
 
 After execution, `.status.executed` is updated.
+### 4. Deploy DJango app (`DjangoApp`)
+
+**Spec**:
+
+```yaml
+apiVersion: django.djangooperator/v1alpha1
+kind: DjangoApp
+metadata:
+  name: sample-app
+  namespace: django-operator
+spec:
+  values:
+    replicaCount: 3
+    image:
+      repository: myregistry/my-django
+      tag: v2.0.0
+    celery:
+      enabled: true
+      replicaCount: 5
+```
+Applying this CR will:
+
+* **Install / upgrade the Helm release under the hood.
+* **Scale your Django and Celery deployments according to .spec.values.
+* **Report the release status back in .status.helmReleaseStatus.
+
+After execution, `.status.executed` is updated.
+
 ## Installation
 1. **Install CRDs**
 
@@ -198,6 +248,13 @@ make uninstall
 ```sh
 make undeploy
 ```
+## Known BUGS
+After creating a DjangoApp CR, in the operator logs we will see reconcile errors like this one:
+```
+another operation (install/upgrade/rollback) is in progress
+```
+The operator is still reconciling OK, but I still do not know how to suppress the errors and/or prevent them
+
 ## License
 
 Copyright 2025.
