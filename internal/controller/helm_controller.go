@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	charts "github.com/jvdiago/django-helm-template"
 	"github.com/operator-framework/helm-operator-plugins/pkg/reconciler"
 	"github.com/operator-framework/helm-operator-plugins/pkg/values"
@@ -14,8 +15,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	//"helm.sh/helm/v3/pkg/chart/loader"
 
 	djangov1alpha1 "github.com/jvdiago/django-operator/api/v1alpha1"
 )
@@ -42,8 +41,7 @@ func specTranslator(c client.Client) values.Translator {
 	})
 }
 
-//+kubebuilder:rbac:groups=apps.django.djangooperator,resources=djangoapps,verbs=get;list;watch;create;update;patch;delete
-
+// +kubebuilder:rbac:groups=apps.django.djangooperator,resources=djangoapps,verbs=get;list;watch;create;update;patch;delete
 // SetupHelmController wires the generic Helm-based reconciler into the manager.
 func SetupHelmController(mgr ctrl.Manager) error {
 	// Load the embedded chart
