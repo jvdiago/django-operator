@@ -8,4 +8,6 @@ metadata:
 spec:
   values:
     djangoServer:
-      replicaCount: 2
+      replicaCount: 1
+      hpa:
+        enabled: false

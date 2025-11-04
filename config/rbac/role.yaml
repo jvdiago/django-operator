@@ -27,6 +27,7 @@ rules:
   - watch
   - delete
   - patch
+  - update
 - apiGroups:
   - "apps"
   resources:
